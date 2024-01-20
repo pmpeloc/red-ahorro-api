@@ -10,42 +10,45 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.signin = exports.signup = void 0;
-const types_1 = require("./types");
 const user_service_1 = require("../services/user.service");
-const types_2 = require("../services/types");
-const genericErrors_1 = require("../types/genericErrors");
+const types_1 = require("./types");
+const error_handler_1 = require("../handlers/error.handler");
 const signup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, password } = req.body;
-    if (!email && !password) {
-        return res
-            .status(400)
-            .json({ code: types_1.UserErrorCodes.EMPTY, message: types_1.UserErrorMessages.EMPTY });
-    }
+    emptyUserHelper(email, password, res);
     try {
         yield (0, user_service_1.createUser)({ email, password });
         return res.status(201).json({
-            code: types_1.UserSuccessCodes.NEW_USER,
-            message: types_1.UserSuccessMessages.NEW_USER,
+            code: types_1.ResponseCodes.USER_NEW,
+            message: types_1.responseMessageMapper[types_1.ResponseCodes.USER_NEW],
         });
     }
     catch (e) {
-        if (e instanceof types_2.UserAlreadyExist) {
-            return res.status(400).json({
-                code: types_1.UserErrorCodes.ALREADY_EXISTS,
-                message: types_1.UserErrorMessages.ALREADY_EXISTS,
-            });
-        }
-        if (e instanceof Error) {
-            return res.status(500).json({
-                code: genericErrors_1.GenericErrorsCode.ERROR_500,
-                message: genericErrors_1.GenericErrorsMessages.ERROR_500,
-                stackMessage: e.message,
-            });
-        }
+        return (0, error_handler_1.errorHandler)(res, e);
     }
 });
 exports.signup = signup;
-const signin = (req, res) => {
-    res.send('signin');
-};
+const signin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email, password } = req.body;
+    emptyUserHelper(email, password, res);
+    try {
+        const token = yield (0, user_service_1.loginUser)({ email, password });
+        return res.status(200).json({
+            code: types_1.ResponseCodes.USER_LOGIN,
+            message: types_1.responseMessageMapper[types_1.ResponseCodes.USER_LOGIN],
+            data: { token },
+        });
+    }
+    catch (e) {
+        return (0, error_handler_1.errorHandler)(res, e);
+    }
+});
 exports.signin = signin;
+const emptyUserHelper = (email, password, res) => {
+    if (!email && !password) {
+        return res.status(400).json({
+            code: types_1.ResponseCodes.USER_EMPTY,
+            message: types_1.responseMessageMapper[types_1.ResponseCodes.USER_EMPTY],
+        });
+    }
+};

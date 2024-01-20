@@ -1,9 +1,6 @@
-import { UserErrorCodes, UserErrorMessages } from '../controllers/types';
+import { ResponseCodes } from '../controllers/types';
 
-export class UserAlreadyExist implements Error {
-  public name = 'UserAlreadyExist';
-  public message = UserErrorMessages.ALREADY_EXISTS;
-  public code = UserErrorCodes.ALREADY_EXISTS;
-
-  constructor() {}
-}
+export type IsUserLogin = {
+  code: ResponseCodes.USER_LOGIN;
+  data: { token: string };
+};

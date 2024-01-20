@@ -1,7 +1,11 @@
 import { Document, model, Schema } from 'mongoose';
 import bcrypt from 'bcrypt';
 
-export interface IUser {
+export interface IUser extends IUserRequest, Document {
+  comparePassword: (password: string) => Promise<boolean>;
+}
+
+export interface IUserRequest {
   email: string;
   password: string;
 }
@@ -20,9 +24,7 @@ const userSchema = new Schema<IUser>({
   },
 });
 
-interface IDocumentUser extends IUser, Document {}
-
-userSchema.pre<IDocumentUser>('save', async function (next) {
+userSchema.pre<IUser>('save', async function (next) {
   const user = this;
 
   if (!user.isModified('password')) return next();

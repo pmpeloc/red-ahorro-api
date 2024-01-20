@@ -8,20 +8,28 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createUser = void 0;
-const user_1 = __importDefault(require("../models/user"));
-const types_1 = require("./types");
-const createUser = (props) => __awaiter(void 0, void 0, void 0, function* () {
-    const { email, password } = props;
-    const userFound = yield user_1.default.findOne({ email });
+exports.loginUser = exports.createUser = void 0;
+const user_repository_1 = require("../repositories/user.repository");
+const createToken_1 = require("../utils/createToken");
+const errors_class_1 = require("./errors.class");
+const createUser = (newUser) => __awaiter(void 0, void 0, void 0, function* () {
+    const userFound = yield (0, user_repository_1.findUserByEmail)(newUser.email);
     if (userFound) {
-        throw new types_1.UserAlreadyExist();
+        throw new errors_class_1.UserAlreadyExists();
     }
-    const newUser = new user_1.default({ email, password });
-    yield newUser.save();
+    yield (0, user_repository_1.saveUser)(newUser);
 });
 exports.createUser = createUser;
+const loginUser = (user) => __awaiter(void 0, void 0, void 0, function* () {
+    const userFound = yield (0, user_repository_1.findUserByEmail)(user.email);
+    if (!userFound) {
+        throw new errors_class_1.UserNotExists();
+    }
+    const matchPassword = yield userFound.comparePassword(user.password);
+    if (matchPassword) {
+        return (0, createToken_1.createToken)(userFound);
+    }
+    throw new errors_class_1.UserInvalidCredentials();
+});
+exports.loginUser = loginUser;

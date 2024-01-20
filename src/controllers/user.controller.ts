@@ -1,56 +1,57 @@
 import { Request, Response } from 'express';
 
-import { IUser } from '../models/user';
-import {
-  UserErrorCodes,
-  UserErrorMessages,
-  UserSuccessCodes,
-  UserSuccessMessages,
-} from './types';
-import { createUser } from '../services/user.service';
-import { UserAlreadyExist } from '../services/types';
-import {
-  GenericErrorsCode,
-  GenericErrorsMessages,
-} from '../types/genericErrors';
+import { createUser, loginUser } from '../services/user.service';
+import { IUserRequest } from '../models/user.model';
+import { ResponseCodes, responseMessageMapper } from './types';
+import { IResponse, errorHandler } from '../handlers/error.handler';
+import { IsUserLogin } from '../services/types';
 
 export const signup = async (
-  req: Request<{}, {}, IUser>,
-  res: Response<{ code: string; message: string; stackMessage?: string }>
+  req: Request<{}, {}, IUserRequest>,
+  res: Response<IResponse>
 ) => {
   const { email, password } = req.body;
 
-  if (!email && !password) {
-    return res
-      .status(400)
-      .json({ code: UserErrorCodes.EMPTY, message: UserErrorMessages.EMPTY });
-  }
+  emptyUserHelper(email, password, res);
 
   try {
     await createUser({ email, password });
 
     return res.status(201).json({
-      code: UserSuccessCodes.NEW_USER,
-      message: UserSuccessMessages.NEW_USER,
+      code: ResponseCodes.USER_NEW,
+      message: responseMessageMapper[ResponseCodes.USER_NEW],
     });
   } catch (e) {
-    if (e instanceof UserAlreadyExist) {
-      return res.status(400).json({
-        code: UserErrorCodes.ALREADY_EXISTS,
-        message: UserErrorMessages.ALREADY_EXISTS,
-      });
-    }
-
-    if (e instanceof Error) {
-      return res.status(500).json({
-        code: GenericErrorsCode.ERROR_500,
-        message: GenericErrorsMessages.ERROR_500,
-        stackMessage: e.message,
-      });
-    }
+    return errorHandler(res, e);
   }
 };
 
-export const signin = (req: Request, res: Response) => {
-  res.send('signin');
+export const signin = async (
+  req: Request<{}, {}, IUserRequest>,
+  res: Response<IResponse & IsUserLogin>
+) => {
+  const { email, password } = req.body;
+
+  emptyUserHelper(email, password, res);
+
+  try {
+    const token = await loginUser({ email, password });
+
+    return res.status(200).json({
+      code: ResponseCodes.USER_LOGIN,
+      message: responseMessageMapper[ResponseCodes.USER_LOGIN],
+      data: { token },
+    });
+  } catch (e) {
+    return errorHandler(res, e);
+  }
+};
+
+const emptyUserHelper = (email: string, password: string, res: Response) => {
+  if (!email && !password) {
+    return res.status(400).json({
+      code: ResponseCodes.USER_EMPTY,
+      message: responseMessageMapper[ResponseCodes.USER_EMPTY],
+    });
+  }
 };

@@ -1,16 +1,34 @@
-import User, { IUser } from '../models/user';
-import { UserAlreadyExist } from './types';
+import { IUserRequest } from '../models/user.model';
+import { findUserByEmail, saveUser } from '../repositories/user.repository';
+import { createToken } from '../utils/createToken';
+import {
+  UserAlreadyExists,
+  UserInvalidCredentials,
+  UserNotExists,
+} from './errors.class';
 
-export const createUser = async (props: IUser): Promise<void> => {
-  const { email, password } = props;
-
-  const userFound = await User.findOne({ email });
+export const createUser = async (newUser: IUserRequest): Promise<void> => {
+  const userFound = await findUserByEmail(newUser.email);
 
   if (userFound) {
-    throw new UserAlreadyExist();
+    throw new UserAlreadyExists();
   }
 
-  const newUser = new User({ email, password });
+  await saveUser(newUser);
+};
 
-  await newUser.save();
+export const loginUser = async (user: IUserRequest): Promise<string> => {
+  const userFound = await findUserByEmail(user.email);
+
+  if (!userFound) {
+    throw new UserNotExists();
+  }
+
+  const matchPassword = await userFound.comparePassword(user.password);
+
+  if (matchPassword) {
+    return createToken(userFound);
+  }
+
+  throw new UserInvalidCredentials();
 };
